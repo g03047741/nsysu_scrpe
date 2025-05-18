@@ -59,8 +59,9 @@ print(onets[:3])  # 顯示前3筆看一下
 
 risk_similarity_104 = pd.read_csv("104.csv", encoding="utf-8-sig")
 risk_similarity_104 = risk_similarity_104.drop_duplicates(subset=['職缺名稱', '公司', '工作內容'], keep='first')
+print(risk_similarity_104)
 data_104 = risk_similarity_104.values.tolist()
-
+input()
 
 for row in data_104:
 

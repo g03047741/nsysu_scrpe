@@ -20,17 +20,17 @@ from utilities import scrape_drive
 
 def job_list_page(page_count):
     driver = scrape_drive()
-    filename = "job_links_104.csv" 
+    filename = "result_2.csv" 
     link_list = []
     company_list = []
     company_name = []
-    experience_list = []
-    education_list = []
-    location_list = []
+
     print("Starting link scraping...")
     try:
         for page in range(1, page_count+1): # Loop through pages 1 to 100
-            url = f"https://www.104.com.tw/jobs/search/?jobcat=2007000000&jobsource=index_s&mode=l&page={page}"
+            # url = f"https://www.104.com.tw/jobs/search/?jobcat=2007000000&jobsource=index_s&mode=l&page={page}"
+            url = f" https://www.104.com.tw/jobs/search/?jobcat=2007000000&isJobList=1&jobsource=joblist_search&order=15&mode=s&page={page}"
+           
             print(f"Fetching page {page}: {url}") 
             driver.get(url)
             # Consider using WebDriverWait instead of fixed sleep for better efficiency and reliability
@@ -53,19 +53,9 @@ def job_list_page(page_count):
                     # print(href)
                     company_list.append(href)
                     company_name.append(i.text)
-                experience = driver.find_elements(By.CSS_SELECTOR, "div.list-small__experience")
-                for i in experience:
-                    # print(i.text)
-                    experience_list.append(i.text)
-                education = driver.find_elements(By.CSS_SELECTOR, "div.list-small__education")
-                for i in education:
-                    # print(i.text)
-                    education_list.append(i.text)
-                location = driver.find_elements(By.CSS_SELECTOR, "div.list-small__location")
-                for i in location:
-                    # print(i.text)
-                    location_list.append(i.text)
-
+                print(link_list)
+                print(company_list)
+                print(company_name)
             except Exception as e:
                 print(f"Error finding links on page {page}: {e}")
     except Exception as e:
@@ -73,18 +63,17 @@ def job_list_page(page_count):
     finally:
 
         data = {
-            "職缺連結":link_list,
+
             "公司名稱":company_name,
             "公司連結":company_list,
-            "經歷":experience_list,
-            "學歷":education_list,
-            "工作地點":location_list
+            "職缺連結":link_list
         }
 
         df = pd.DataFrame(data)
-        print(df)
+        # print(df)
         df.to_csv(filename,index=False)
 
+  
     driver.quit()
     
     return df
@@ -474,8 +463,8 @@ if __name__ == "__main__":
     #     job_link = read_file_to_df('job_links_104.csv')
 
     # job_info(job_link)
+    job_list_page(150)
+    # Combine_dataframe()
 
-    Combine_dataframe()
-
-    fix_missing()
+    # fix_missing()
     
