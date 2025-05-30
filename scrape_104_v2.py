@@ -12,15 +12,16 @@ import re
 import time
 import uuid
 import pandas as pd
+import numpy as np
 from random import randint
-from utilities import scrape_drive
+from utilities import scrape_drive, encoding_type
 # from config import *
 # from sheets_ import upload_to_sheets
 
 
 def job_list_page(page_count):
     driver = scrape_drive()
-    filename = "result_2.csv" 
+    filename = "result_1.csv" 
     link_list = []
     company_list = []
     company_name = []
@@ -70,6 +71,8 @@ def job_list_page(page_count):
         }
 
         df = pd.DataFrame(data)
+        df['uuid'] = df.apply(lambda row: uuid.uuid4(), axis=1)
+        
         # print(df)
         df.to_csv(filename,index=False)
 
@@ -153,18 +156,27 @@ def search_company_list(pages):
                 )
     driver.quit()
 
-def job_info(link_list_df):
- 
-    df = link_list_df[link_list_df['status']!='Done']
+def job_info(txt_filename):
+
+    link_list_df = pd.read_csv(txt_filename, encoding=encoding_type)
+    new_headers = ['company','company_link','job_link','uuid']
+
+    # 直接賦值給 df.columns
+    link_list_df.columns = new_headers
     # link_list = df.values.tolist()
-    csv_filename_append = 'output.csv'
+    csv_filename_append = 'result_2.csv'
     driver = scrape_drive()
 
     time.sleep(3)
     company_link = []
-    for row in df.itertuples(index=True, name='PandasRow'):
+    loop_count = 0
+    # for row in link_list_df.iloc[start_index:].itertuples(index=True, name='PandasRow'):
+    #     print(f"處理行: Index={row.Index}, col1={row.col1}, col2={row.col2}")
+    for row in link_list_df.itertuples(index=True, name='PandasRow'):
+        loop_count += 1
+        print(f"第 {loop_count} 次迴圈:")
         job_list = []
-        company_list = []
+        company_list = [row.company]
         job_category = []
         needs_person = []
         salary_list = []
@@ -174,9 +186,9 @@ def job_info(link_list_df):
 
         current_index = row.Index
         item_url = row.job_link
-        education = [row.education]
-        location = [row.location]
-        experience = [row.experience]
+        education = []
+        location = []
+        experience = []
         processed_result_status  = ''
         # print(current_index,item_url,current_status)
 
@@ -188,11 +200,6 @@ def job_info(link_list_df):
             
             # print(jobs.text)
             job_list.append(jobs.text)
-    
-            company = driver.find_element(By.CSS_SELECTOR, "a[data-gtm-head='公司名稱']")
-            # print(company.get_attribute('title'))
-            company_list.append(company.get_attribute('title'))
-            company_link.append(company.get_attribute('href'))
 
             job_discript = driver.find_element(By.XPATH, "//div[contains(@class, 'job-address')]")
             salary = job_discript.get_attribute('salary')
@@ -209,6 +216,14 @@ def job_info(link_list_df):
             job_cat = job_cat_temp.find_element(By.XPATH, "//div[contains(@class, 'list-row__data')]")
             job_category.append(job_cat.text)
 
+            location_header_div = job_category_elements.find_element(By.XPATH, "//div[contains(@class, 'list-row') and .//h3[text()='上班地點']]")
+            # 在這個 div 下面找到實際的地址 span
+            work_location_element = location_header_div.find_element(By.CSS_SELECTOR, "div.list-row__data .job-address span")
+            work_location = work_location_element.text.strip() if work_location_element else "未找到上班地點"
+            print(work_location)
+            location.append(work_location)
+
+  
             skill_table = driver.find_element(By.XPATH, "//div[contains(@class, 'job-requirement-table')]")
             skill_head = skill_table.find_elements(By.XPATH, ".//div[contains(@class, 'list-row__head')]")
             skill_data = skill_table.find_elements(By.XPATH, ".//div[contains(@class, 'list-row__data')]")
@@ -217,32 +232,62 @@ def job_info(link_list_df):
                 # print(skill_head[i].text)
                 if skill_head[i].text == "工作技能":
                     skill.append(skill_data[i].text)
-
+                elif skill_head[i].text == "學歷要求":
+                    education.append(skill_data[i].text)
+                elif skill_head[i].text == "工作經歷":
+                    experience.append(skill_data[i].text)
             job_description = driver.find_element(By.XPATH, "//p[contains(@class, 'job-description__content')]")
             job_description_list.append(job_description.text)
             
         except Exception as e:
             print(f"抓取 '職務類別' 時發生錯誤: {e}")
             processed_result_status = 'Error'
+            # 檔案名稱
+            file_name = "my_log.txt"
+
+            # 寫入第一批資料
+            with open(file_name, 'a', encoding='utf-8') as f:
+                f.write(f"{e},{row.uuid} \n")
+  
+            print(f"資料已寫入 '{file_name}'。")
 
         if processed_result_status == '':
             processed_result_status = 'Done'
 
-        df.loc[current_index, 'status'] = processed_result_status
-
-
         print(f"準備逐筆附加資料到 '{csv_filename_append}'...")
         
+        if job_list == []:
+            job_list = [np.nan]
+        if needs_person == []:
+            needs_person = [np.nan]
+        if job_category == []:
+            job_category = [np.nan]
+        if salary_list == []:
+            salary_list = [np.nan]
+        if skill == []:
+            skill = [np.nan]
+        if education == []:
+            education = [np.nan]
+        if location == []:
+            location = [np.nan]
+        if experience == []:
+            experience = [np.nan]
+        if job_description_list == []:
+            job_description_list = [np.nan]
+
         data = {
+            "uuid":[row.uuid],
             "職缺名稱":job_list,
-            "公司":company_list,
+            "公司名稱":company_list,
             "需求人數":needs_person,
             "職位類別":job_category,
             "工作待遇":salary_list,
             "工作技能":skill,
+
             "學歷要求":education,
             "地點":location,
             "經歷要求":experience,
+
             "工作內容":job_description_list,
         }
         
@@ -267,14 +312,13 @@ def job_info(link_list_df):
             print(e)
             print(data)
 
-    csv_filename_basic = 'link_status.csv'
     #用來看哪邊沒有上傳到
-    try:
-        df.to_csv(csv_filename_basic)
-        print(f"\n已將 DataFrame 寫入到 '{csv_filename_basic}' (包含索引和表頭)")
-        # 你可以打開 basic_output.csv 看看，會發現多了第一欄的索引(0, 1, 2)
-    except Exception as e:
-        print(f"\n寫入檔案 '{csv_filename_basic}' 時發生錯誤: {e}")
+    # try:
+    #     df.to_csv(csv_filename_basic)
+    #     print(f"\n已將 DataFrame 寫入到 '{csv_filename_basic}' (包含索引和表頭)")
+    #     # 你可以打開 basic_output.csv 看看，會發現多了第一欄的索引(0, 1, 2)
+    # except Exception as e:
+    #     print(f"\n寫入檔案 '{csv_filename_basic}' 時發生錯誤: {e}")
 
     driver.quit()
 
@@ -462,8 +506,8 @@ if __name__ == "__main__":
     #     job_list_page()
     #     job_link = read_file_to_df('job_links_104.csv')
 
-    # job_info(job_link)
-    job_list_page(150)
+    job_info('result_1.csv')
+    # job_list_page(150)
     # Combine_dataframe()
 
     # fix_missing()

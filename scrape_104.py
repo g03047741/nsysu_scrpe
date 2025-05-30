@@ -82,6 +82,7 @@ def job_list_page(page_count):
         }
 
         df = pd.DataFrame(data)
+        df['uuid'] = df.apply(lambda row: uuid.uuid4(), axis=1)
         print(df)
         df.to_csv(filename,index=False)
 
