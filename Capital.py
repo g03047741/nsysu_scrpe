@@ -50,8 +50,11 @@ def company_link_unmatch(df):
 
 def get_Company_from_jobList():
     company = pd.read_csv("company_info.csv", encoding=encoding_type)
-    job_links = pd.read_csv("job_links_104.csv", encoding=encoding_type)
     company.rename(columns={'公司': '公司名稱'}, inplace=True)
+    company_unique = company.drop_duplicates(subset=['公司名稱'])
+    job_links = pd.read_csv("job_links_104.csv", encoding=encoding_type)
+    job_links_unique = job_links.drop_duplicates(subset=['公司名稱'])
+    
 
     companies_to_check_mask = ~job_links['公司名稱'].isin(company['公司名稱'])
     new_companies_from_job_links_df = job_links[companies_to_check_mask]
@@ -88,13 +91,15 @@ def get_Company_from_jobList():
 
 def merger_jobList_companyList():
     company = pd.read_csv("company_info.csv", encoding=encoding_type)
-    job_links = pd.read_csv("job_links_104.csv", encoding=encoding_type)
+   
+    job_links = pd.read_csv("result_1.csv", encoding=encoding_type)
     company.rename(columns={'公司': '公司名稱'}, inplace=True)
-    result = pd.merge(job_links, company, how='left', on='公司名稱')
-    # print(result)
-    df_with_uuid = result.assign(uuid=[str(uuid.uuid4()) for _ in range(len(result))])
-    df_with_uuid = df_with_uuid[['uuid','公司名稱','公司連結','產業類別','資本額','員工人數','職缺連結','經歷','學歷','工作地點']]
-    df_with_uuid.to_csv("result_3.csv", encoding=encoding_type, index=False)
+    company_unique = company.drop_duplicates(subset=['公司名稱'])
+    result = pd.merge(job_links, company_unique, how='left', on='公司名稱')
+    print(result)
+    # df_with_uuid = result.assign(uuid=[str(uuid.uuid4()) for _ in range(len(result))])
+    # df_with_uuid = df_with_uuid[['uuid','公司名稱','公司連結','產業類別','資本額','員工人數','職缺連結']]
+    result.to_csv("result_3.csv", encoding=encoding_type, index=False)
 
 def Capital_104():
    
@@ -213,6 +218,6 @@ def Capital_gov():
 
 
 if __name__ == "__main__":
-
-    get_Company_from_jobList()
-    # Capital_104()
+    merger_jobList_companyList()
+    # get_Company_from_jobList()
+    Capital_104()
