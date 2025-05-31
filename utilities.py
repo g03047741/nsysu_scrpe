@@ -14,7 +14,7 @@ import uuid
 import pandas as pd
 from random import randint
 
-encoding_type = 'utf-8'
+encoding_type = 'utf-8-sig'
 
 def scrape_drive():
     # 自動下載ChromeDriver

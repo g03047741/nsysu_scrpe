@@ -59,103 +59,107 @@ print(onets[:3])  # 顯示前3筆看一下
 # # 6. 轉換成語意向量（embedding）
 # task_embeddings_en = model.encode(tasks, convert_to_tensor=True)
 
-risk_similarity_104 = pd.read_csv("104.csv", encoding="utf-8-sig")
+risk_similarity_104 = pd.read_csv("result_7.csv", encoding="utf-8-sig")
 
 Data104 = risk_similarity_104.values.tolist()
 
 
 for j in Data104:
-
+    print(j)
     print(j[0],j[1])
-    random_uuid = uuid.uuid4()
+    # random_uuid = uuid.uuid4()
 
     # UUID 物件
     # print(f"UUID 物件: {random_uuid}")
 
     # 通常會將 UUID 轉換成字串來使用
-    uuid_string = str(random_uuid)
+    # uuid_string = str(random_uuid)
     # print(f"UUID 字串: {uuid_string}")
     # 中文職缺摘要文字
-    job_desc = j[9]
+    job_cat_list = j[4].split("、")
+    print(job_cat_list)
+    for job_cat in job_cat_list:
+        job_cat = job_cat.replace("\n", "")
+        job_desc = job_cat+" "+j[10]
 
-    # 假設 onets 是已經建好的清單
-    # onets = [(SOC_code, title, task, risk_score), ...]
+        # 假設 onets 是已經建好的清單
+        # onets = [(SOC_code, title, task, risk_score), ...]
 
-    # 轉換中文描述向量
-    job_vec = model.encode(job_desc, convert_to_tensor=True)
+        # 轉換中文描述向量
+        job_vec = model.encode(job_desc, convert_to_tensor=True)
 
-    # 提取 O*NET 任務敘述並轉向量
-    task_texts = [task for _, _, task, _ in onets]
-    task_embeddings = model.encode(task_texts, convert_to_tensor=True)
+        # 提取 O*NET 任務敘述並轉向量
+        task_texts = [task for _, _, task, _ in onets]
+        task_embeddings = model.encode(task_texts, convert_to_tensor=True)
 
-    # 語意相似度計算
-    similarities = util.pytorch_cos_sim(job_vec, task_embeddings)
-    similarity_scores = similarities.squeeze().tolist()
+        # 語意相似度計算
+        similarities = util.pytorch_cos_sim(job_vec, task_embeddings)
+        similarity_scores = similarities.squeeze().tolist()
 
-    # 整合結果
-    results = []
-    results_104 = []
-    numerator = 0
-    denominator = 0
+        # 整合結果
+        results = []
+        results_104 = []
+        numerator = 0
+        denominator = 0
 
-    for i, (code, title, task, risk) in enumerate(onets):
-        sim = similarity_scores[i]
-        if round(sim, 3) >= 0.35:
-            results.append({
-                "O*NET職業代碼": code,
-                "職業名稱": title,
-                "任務摘要": task,
-                "語意相似度": round(sim, 3),
-                "自動化風險分數": risk
-            })
-        numerator += sim * risk
-        denominator += sim
+        for i, (code, title, task, risk) in enumerate(onets):
+            sim = similarity_scores[i]
+            if round(sim, 3) >= 0.35:
+                results.append({
+                    "O*NET職業代碼": code,
+                    "職業名稱": title,
+                    "任務摘要": task,
+                    "語意相似度": round(sim, 3),
+                    "自動化風險分數": risk
+                })
+            numerator += sim * risk
+            denominator += sim
 
-    # 計算加權總風險值
-    weighted_risk = numerator / denominator if denominator != 0 else 0
-    weighted_risk = round(weighted_risk, 3)
+        # 計算加權總風險值
+        weighted_risk = numerator / denominator if denominator != 0 else 0
+        weighted_risk = round(weighted_risk, 3)
 
-    # 判斷風險等級
-    if weighted_risk <= 0.33:
-        risk_level = "低風險"
-    elif weighted_risk <= 0.66:
-        risk_level = "中風險"
-    else:
-        risk_level = "高風險"
+        # 判斷風險等級
+        if weighted_risk <= 0.33:
+            risk_level = "低風險"
+        elif weighted_risk <= 0.66:
+            risk_level = "中風險"
+        else:
+            risk_level = "高風險"
 
-    # 加入總結行
-    results.append({
-        "O*NET職業代碼": "總結",
-        "職業名稱": risk_level,
-        "任務摘要": "",
-        "語意相似度": "",
-        "自動化風險分數": weighted_risk
-    })
+        # 加入總結行
+        results.append({
+            "O*NET職業代碼": "總結",
+            "職業名稱": risk_level,
+            "任務摘要": "",
+            "語意相似度": "",
+            "自動化風險分數": weighted_risk
+        })
+       
+        results_104.append({
+            "ID":j[0],
+            "公司": j[2],
+            "職務": j[1],
+            "類別": job_cat,
+            "工作內容":j[10],
+            "風險等級": risk_level,
+            "自動化風險分數": weighted_risk
+        })
 
-    results_104.append({
-        "ID":uuid_string,
-        "公司": j[1],
-        "職務": j[0],
-        "工作內容":j[9],
-        "風險等級": risk_level,
-        "自動化風險分數": weighted_risk
-    })
+        # 轉成 DataFrame 查看
+        df_results = pd.DataFrame(results)
+        df_results_104 = pd.DataFrame(results_104)
 
-    # 轉成 DataFrame 查看
-    df_results = pd.DataFrame(results)
-    df_results_104 = pd.DataFrame(results_104)
+        print(f"加權總自動化風險值：{weighted_risk} ({risk_level})")
+        print(df_results)
 
-    print(f"加權總自動化風險值：{weighted_risk} ({risk_level})")
-    print(df_results)
-    str_data = j[0].replace(" ", "_")
-    str_data = str_data.replace("/", "_")
-    df_results.to_csv('output/'+ uuid_string +'.csv')
- 
+        df_results.to_csv('output/'+ j[0]+"_"+job_cat+'.csv')
     
-    try:
-        with open(result_path, 'r') as f:
-            # 檔案已存在，附加時不寫入表頭
-            df_results_104.to_csv(result_path, mode='a', header=False, index=False)
-    except FileNotFoundError:
-        # 檔案不存在，第一次寫入，包含表頭
-        df_results_104.to_csv(result_path, mode='w', header=True, index=False)
+        
+        try:
+            with open(result_path, 'r') as f:
+                # 檔案已存在，附加時不寫入表頭
+                df_results_104.to_csv(result_path, mode='a', header=False, index=False)
+        except FileNotFoundError:
+            # 檔案不存在，第一次寫入，包含表頭
+            df_results_104.to_csv(result_path, mode='w', header=True, index=False)
