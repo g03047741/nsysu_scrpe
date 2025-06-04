@@ -63,8 +63,8 @@ risk_similarity_104 = pd.read_csv("result_7.csv", encoding="utf-8-sig")
 
 Data104 = risk_similarity_104.values.tolist()
 
-
-for j in Data104:
+print(len(Data104))
+for j in Data104[2500:3009]:
     print(j)
     print(j[0],j[1])
     # random_uuid = uuid.uuid4()
@@ -77,7 +77,8 @@ for j in Data104:
     # print(f"UUID 字串: {uuid_string}")
     # 中文職缺摘要文字
     job_cat_list = j[4].split("、")
-    print(job_cat_list)
+    print(len(job_cat_list))
+    # input()
     for job_cat in job_cat_list:
         job_cat = job_cat.replace("\n", "")
         job_desc = job_cat+" "+j[10]

@@ -14,7 +14,7 @@ import uuid
 import pandas as pd
 from random import randint
 
-encoding_type = 'utf-8-sig'
+encoding_type = 'utf-8'
 
 def scrape_drive():
     # 自動下載ChromeDriver
@@ -46,3 +46,13 @@ def scrape_drive():
     time.sleep(1)
 
     return driver
+
+def format_change(file):
+    format_ = 'utf-8-sig'
+    df = pd.read_csv(file, encoding=format_)
+    print(df)
+    new_file = file.split('.')
+    df.to_csv(new_file[0]+'_formatted.'+new_file[1],index=False, encoding=format_)
+
+if __name__ == "__main__":
+    format_change('result_104_1.csv')
