@@ -100,26 +100,35 @@ for j in Data104[2500:3009]:
         # 整合結果
         results = []
         results_104 = []
+        results_all =[]
         numerator = 0
         denominator = 0
+        numerator_all = 0
+        denominator_all = 0
 
         for i, (code, title, task, risk) in enumerate(onets):
             sim = similarity_scores[i]
-            if round(sim, 3) >= 0.35:
-                results.append({
-                    "O*NET職業代碼": code,
-                    "職業名稱": title,
-                    "任務摘要": task,
-                    "語意相似度": round(sim, 3),
-                    "自動化風險分數": risk
-                })
-            numerator += sim * risk
-            denominator += sim
+            data = {
+                "O*NET職業代碼": code,
+                "職業名稱": title,
+                "任務摘要": task,
+                "語意相似度": round(sim, 3),
+                "自動化風險分數": risk
+            }
+            if round(sim, 3) >= 0:
+                results.append(data)
+                numerator += sim * risk
+                denominator += sim
+
+            results_all.append(data)
+            numerator_all += sim * risk
+            denominator_all += sim
 
         # 計算加權總風險值
         weighted_risk = numerator / denominator if denominator != 0 else 0
         weighted_risk = round(weighted_risk, 3)
-
+        weighted_risk_all = numerator_all / denominator_all if denominator_all != 0 else 0
+        weighted_risk_all = round(weighted_risk_all, 3)
         # 判斷風險等級
         if weighted_risk <= 0.33:
             risk_level = "低風險"
@@ -127,6 +136,14 @@ for j in Data104[2500:3009]:
             risk_level = "中風險"
         else:
             risk_level = "高風險"
+
+        # 判斷風險等級
+        if weighted_risk_all <= 0.33:
+            risk_level_all = "低風險"
+        elif weighted_risk_all <= 0.66:
+            risk_level_all = "中風險"
+        else:
+            risk_level_all = "高風險"
 
         # 加入總結行
         results.append({
@@ -136,6 +153,13 @@ for j in Data104[2500:3009]:
             "語意相似度": "",
             "自動化風險分數": weighted_risk
         })
+        results_all.append({
+            "O*NET職業代碼": "總結",
+            "職業名稱": risk_level_all,
+            "任務摘要": "",
+            "語意相似度": "",
+            "自動化風險分數": weighted_risk_all
+        })
        
         results_104.append({
             "ID":j[0],
@@ -144,18 +168,21 @@ for j in Data104[2500:3009]:
             "類別": job_cat,
             "工作內容":j[10],
             "風險等級": risk_level,
-            "自動化風險分數": weighted_risk
+            "自動化風險分數": weighted_risk,
+            "風險等級_all": risk_level_all,
+            "自動化風險分數_all": weighted_risk_all
         })
 
         # 轉成 DataFrame 查看
         df_results = pd.DataFrame(results)
+        df_results_all = pd.DataFrame(results_all)
         df_results_104 = pd.DataFrame(results_104)
 
         print(f"加權總自動化風險值：{weighted_risk} ({risk_level})")
         print(df_results)
 
         df_results.to_csv('output/'+ j[0]+"_"+job_cat+'.csv')
-    
+        df_results_all.to_csv('output_all/'+ j[0]+"_"+job_cat+'.csv')
         
         try:
             with open(result_path, 'r') as f:
